@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebAssembly Test</title>
+    <script type="module">
+      import init, {decode_blurhash, encode_image} from './pkg/blurhash_wasm.js';
+
+      async function fetchAndDisplayImage() {
+        await init(); // WebAssemblyモジュールの初期化
+
+        // 画像をフェッチして表示
+        const imageUrl = 'https://picsum.photos/300/200/?random';
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        document.getElementById('originalImage').src = URL.createObjectURL(blob);
+
+        // 画像データをArrayBufferとして取得
+        const arrayBuffer = await blob.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+
+        // 画像をエンコードしてハッシュ値を計算
+        const blurhash = await encode_image(data, 4, 3);
+        document.getElementById('blurhashValue').textContent = blurhash;
+
+        // ハッシュ値をデコードしてcanvasに描画
+        const pixels = await decode_blurhash(blurhash, 300, 200, 1.0);
+        renderCanvas(new Uint8ClampedArray(pixels), 300, 200);
+      }
+
+      function renderCanvas(pixels, width, height) {
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const imageData = new ImageData(pixels, width, height);
+        canvas.width = width;
+        canvas.height = height;
+        ctx.putImageData(imageData, 0, 0);
+      }
+
+      window.addEventListener('load', fetchAndDisplayImage);
+    </script>
+</head>
+<body>
+    <h1>Blurhash Example</h1>
+    <img id="originalImage" alt="Original Image" />
+    <p>Blurhash Value: <span id="blurhashValue"></span></p>
+    <canvas id="canvas"></canvas>
+</body>
+</html>
