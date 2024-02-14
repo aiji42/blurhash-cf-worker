@@ -6,7 +6,7 @@
     <script type="module">
       import { decodeBlurHash } from 'https://cdn.jsdelivr.net/npm/fast-blurhash@1.1.2/index.min.js';
 
-      const workerUrl = 'http://localhost:8787';
+      const workerUrl = 'https://blurhash-cf-worker.aiji422990.workers.dev/';
 
       async function fetchBlurHash(imageUrl) {
         const response = await fetch(`${workerUrl}?img=${encodeURIComponent(imageUrl)}`);
