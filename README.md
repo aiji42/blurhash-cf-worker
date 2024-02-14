@@ -1,6 +1,8 @@
 # blurhash cloudflare workers
 This is a simple cloudflare worker that uses blurhash to generate a placeholder image for a given image url.
 
+[demo](https://blurhash-cf-worker.pages.dev/)
+
 ## Build wasm with rust
 
 docker build image
