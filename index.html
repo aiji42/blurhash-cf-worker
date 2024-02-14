@@ -4,46 +4,144 @@
     <meta charset="UTF-8">
     <title>WebAssembly Test</title>
     <script type="module">
-      import init, {decode_blurhash, encode_image} from './pkg/blurhash_wasm.js';
+      import { decodeBlurHash } from 'https://cdn.jsdelivr.net/npm/fast-blurhash@1.1.2/index.min.js';
 
-      async function fetchAndDisplayImage() {
-        await init(); // WebAssemblyモジュールの初期化
+      const workerUrl = 'http://localhost:8787';
 
-        // 画像をフェッチして表示
-        const imageUrl = 'https://picsum.photos/300/200/?random';
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        document.getElementById('originalImage').src = URL.createObjectURL(blob);
-
-        // 画像データをArrayBufferとして取得
-        const arrayBuffer = await blob.arrayBuffer();
-        const data = new Uint8Array(arrayBuffer);
-
-        // 画像をエンコードしてハッシュ値を計算
-        const blurhash = await encode_image(data, 4, 3);
-        document.getElementById('blurhashValue').textContent = blurhash;
-
-        // ハッシュ値をデコードしてcanvasに描画
-        const pixels = await decode_blurhash(blurhash, 300, 200, 1.0);
-        renderCanvas(new Uint8ClampedArray(pixels), 300, 200);
+      async function fetchBlurHash(imageUrl) {
+        const response = await fetch(`${workerUrl}?img=${encodeURIComponent(imageUrl)}`);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.text();
       }
 
-      function renderCanvas(pixels, width, height) {
+      async function displayImageAndHash() {
+        const imageUrl = document.getElementById('imageUrl').value;
+        const imgElement = document.getElementById('originalImage');
+        imgElement.src = "";
+        
+        // 画像を表示
+        imgElement.src = imageUrl;
+        
+        // Blurhashハッシュ値を取得
+        const hash = await fetchBlurHash(imageUrl);
+        
+        const input = document.getElementById('blurhashValue');
+        input.value = hash;
+        input.oninput()
+        
+        return hash;
+      }
+      window.displayImageAndHash = displayImageAndHash
+
+      function renderCanvas() {
+        const width = 300;
+        const height = 200;
+        const hash = document.getElementById('blurhashValue').value;
+        const pixels = decodeBlurHash(hash, width, height, 1.0);
+        
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
-        const imageData = new ImageData(pixels, width, height);
+        const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height);
         canvas.width = width;
         canvas.height = height;
         ctx.putImageData(imageData, 0, 0);
       }
-
-      window.addEventListener('load', fetchAndDisplayImage);
+      window.renderCanvas = renderCanvas;
+      
+      // ページのロードが完了したら、画像のURLを使用してプロセスを開始
+      window.addEventListener('load', () => {
+        const imageUrl = `https://picsum.photos/id/${new Date().getTime() % 100}/300/200/`;
+        const input = document.getElementById('imageUrl')
+        input.value = imageUrl;
+        input.onchange();
+      });
     </script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .label {
+            font-weight: bold;
+            color: #555;
+            display: block;
+            text-align: left; /* 元の左揃えのスタイルを維持 */
+            width: 100%;
+        }
+        input#imageUrl, input#blurhashValue {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px; /* 元のマージンに調整 */
+            box-sizing: border-box;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+        img, canvas {
+            display: block;
+            margin: 0 auto; /* 中央揃えにするためのスタイル */
+            border: 1px solid #ddd;
+            max-width: 100%; /* コンテナの幅を超えないように調整 */
+        }
+        img {
+            width: 300px;
+            height: 200px;
+        }
+        .process-step, .arrow {
+            text-align: center; /* テキストを中央揃え */
+            margin: 20px 0; /* 上下のマージンを調整 */
+        }
+        .process-step {
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            font-style: italic;
+        }
+        .arrow::before {
+            content: '⇣';
+            font-size: 24px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Blurhash Example</h1>
-    <img id="originalImage" alt="Original Image" />
-    <p>Blurhash Value: <span id="blurhashValue"></span></p>
+<div class="container">
+    <h1>Blurhash Cloudflare Workers Example</h1>
+    <label class="label">
+        Image URL:
+        <input id="imageUrl" type="text" onchange="displayImageAndHash()" />
+    </label>
+    <div>
+        <img id="originalImage" alt="Original Image" />
+    </div>
+    <div class="arrow"></div>
+    <div class="process-step">
+        The image url above is sent to a Cloudflare Worker, which computes the Blurhash string.
+    </div>
+    <label class="label">
+        Blurhash string:
+        <input type="text" id="blurhashValue" oninput="renderCanvas()" />
+    </label>
+    <div class="arrow"></div>
     <canvas id="canvas"></canvas>
+    <div class="process-step">
+        The Blurhash string is then decoded back into an image and displayed on the canvas.
+    </div>
+</div>
 </body>
 </html>
