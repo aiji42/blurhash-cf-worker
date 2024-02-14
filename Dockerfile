@@ -6,4 +6,4 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-CMD ["wasm-pack", "build", "--target", "web"]
+CMD ["wasm-pack", "build"]
