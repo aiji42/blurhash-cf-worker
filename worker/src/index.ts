@@ -13,7 +13,7 @@ export default {
 		const response = await fetch(imageUrl);
 		const buffer = await response.arrayBuffer();
 		const image = new Uint8Array(buffer);
-		const hash = encode_image(image, 6, 6);
+		const hash = encode_image(image, 6, 4);
 
 		return new Response(hash, {
 			status: 200,
